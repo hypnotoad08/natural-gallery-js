@@ -38,6 +38,10 @@ export class Item<Model extends ModelAttributes> {
      */
     public readonly sanitizedTitle: string;
     /**
+     * Cleaned accessible description for screen readers
+     */
+    private readonly sanitizedAccessibleDescription: string;
+    /**
      * Reference to the select button
      */
     private _checkbox: HTMLButtonElement | null = null;
@@ -45,6 +49,7 @@ export class Item<Model extends ModelAttributes> {
      * Element referring the "button" containing the label
      */
     private figcaption: HTMLElement | null = null;
+    private static accessibleDescriptionId = 0;
 
     /**
      *
@@ -56,6 +61,7 @@ export class Item<Model extends ModelAttributes> {
         public readonly model: Model,
     ) {
         this.sanitizedTitle = sanitizeHtml(model.title);
+        this.sanitizedAccessibleDescription = sanitizeHtml(model.accessibleDescription);
     }
 
     /**
@@ -159,6 +165,7 @@ export class Item<Model extends ModelAttributes> {
         const figure = this.getFigure();
         const caption = this.getEmptyCaption();
         const image = this.getImage(!!caption);
+        this.attachAccessibleDescription(figure, image);
 
         // Prepare contextual containers
         let root: HTMLElement;
@@ -354,11 +361,28 @@ export class Item<Model extends ModelAttributes> {
         // If title, but no alt neither caption, set title as alt attribute on image
         if (this.model.alt && this.model.alt !== this.sanitizedTitle) {
             image.setAttribute('alt', this.model.alt);
-        } else if (!hasCaption && this.sanitizedTitle) {
+        } else if ((!hasCaption && !this.sanitizedAccessibleDescription) && this.sanitizedTitle) {
             image.setAttribute('alt', this.sanitizedTitle);
+        }
+        else {
+            image.setAttribute('alt', '');
         }
 
         return image;
+    }
+
+    private attachAccessibleDescription(figure: HTMLElement, image: HTMLImageElement): void {
+        if (!this.sanitizedAccessibleDescription) {
+            return;
+        }
+
+        const description = this.document.createElement('span');
+        description.classList.add('ngjs-sr-only');
+        const descriptionId = `ngjs-accessible-description-${++Item.accessibleDescriptionId}`;
+        description.id = descriptionId;
+        description.innerHTML = this.sanitizedAccessibleDescription;
+        figure.appendChild(description);
+        image.setAttribute('aria-describedby', descriptionId);
     }
 
     private getEmptyCaption(): HTMLElement | null {

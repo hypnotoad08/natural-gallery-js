@@ -38,6 +38,8 @@ export function setupDemoExtreme(galleryClass, options) {
                         enlargedWidth: width,
                         enlargedHeight: height,
                         title: i.description ? i.description : i.user.name,
+                        alt: i.alt || null,
+                        accessibleDescription: i.accessibleDescription || null,
                         color: i.color
                     };
                 });

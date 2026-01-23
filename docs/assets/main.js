@@ -147,7 +147,9 @@ export function setupDemo(galleryClass, options) {
                         enlargedWidth: i.width,
                         enlargedHeight: i.height,
                         // link: 'https://example.com',
-                        title: i.description ? i.description : i.user.name
+                        title: i.description ? i.description : i.user.name,
+                        alt: i.alt || null,
+                        accessibleDescription: i.accessibleDescription || null
                         // objectPosition: ['0% 0%', '100% 100%', undefined][Math.floor(Math.random() * 3)],
                         // objectFit: ['cover', 'contain', undefined][Math.floor(Math.random() * 3)],
                     };

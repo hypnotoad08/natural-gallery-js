@@ -198,6 +198,28 @@ describe('Item', () => {
         expect(item.caption?.classList.contains('hover')).toBe(true);
     });
 
+    it('should render caption when label visibility is hover and title is set', () => {
+        const item = createItem(mockDocument, {title: 'My title'}, {labelVisibility: LabelVisibility.HOVER});
+        expect(item.caption).not.toBeNull();
+    });
+
+    it('should not render caption when title is missing', () => {
+        const item = createItem(mockDocument, {title: ''}, {labelVisibility: LabelVisibility.ALWAYS});
+        expect(item.caption).toBeNull();
+    });
+
+    it('should use title as alt when label is hidden', () => {
+        const item = createItem(mockDocument, {title: 'My title'}, {labelVisibility: LabelVisibility.NEVER});
+        expect(item.caption).toBeNull();
+        expect(item.image.getAttribute('alt')).toBe('My title');
+    });
+
+    it('should use empty alt when label is shown', () => {
+        const item = createItem(mockDocument, {title: 'My title'}, {labelVisibility: LabelVisibility.ALWAYS});
+        expect(item.caption).not.toBeNull();
+        expect(item.image.getAttribute('alt')).toBe('');
+    });
+
     it('should remove item from DOM', () => {
         const item = createItem(mockDocument, {title: 'My title'}, {labelVisibility: LabelVisibility.HOVER});
 
@@ -210,6 +232,48 @@ describe('Item', () => {
     it('should should set transparent background color', () => {
         const item = createItem(mockDocument, {title: 'My title', color: '#ffffff'});
         expect(item.root.style.backgroundColor).toEqual('rgba(255, 255, 255, 0.067)');
+    });
+
+    it('should attach accessible description and aria-describedby', () => {
+        const item = createItem(mockDocument, {
+            title: 'My title',
+            accessibleDescription: 'Long description for screen readers.',
+        });
+
+        const description = item.root.querySelector('.ngjs-sr-only') as HTMLElement | null;
+        expect(description).not.toBeNull();
+        expect(description?.textContent).toBe('Long description for screen readers.');
+        expect(item.image.getAttribute('aria-describedby')).toBe(description?.id);
+    });
+
+    it('should set empty alt when accessible description is provided without caption', () => {
+        const item = createItem(mockDocument, {
+            title: 'My title',
+            accessibleDescription: 'Long description for screen readers.',
+        });
+
+        expect(item.image.getAttribute('alt')).toBe('');
+    });
+
+    it('should set empty alt when accessible description is provided with caption', () => {
+        const item = createItem(
+            mockDocument,
+            {title: 'My title', accessibleDescription: 'Long description for screen readers.'},
+            {labelVisibility: LabelVisibility.ALWAYS},
+        );
+
+        expect(item.caption).not.toBeNull();
+        expect(item.image.getAttribute('alt')).toBe('');
+    });
+
+    it('should keep explicit alt when accessible description is provided', () => {
+        const item = createItem(mockDocument, {
+            title: 'My title',
+            alt: 'My alt',
+            accessibleDescription: 'Long description for screen readers.',
+        });
+
+        expect(item.image.getAttribute('alt')).toBe('My alt');
     });
 
     it('should initialize item unchecked', () => {
@@ -283,7 +347,7 @@ describe('Item', () => {
                         zoom: NO_EVENT,
                         activate: NO_EVENT,
                     },
-                    image: {ariaLabel: null, alt: null, tabindex: null, href: null, zoom: NO_EVENT, activate: NO_EVENT},
+                    image: {ariaLabel: null, alt: '', tabindex: null, href: null, zoom: NO_EVENT, activate: NO_EVENT},
                     caption: {
                         ariaLabel: null,
                         text: 'My title',
@@ -359,7 +423,7 @@ describe('Item', () => {
                         zoom: NO_EVENT,
                         activate: NO_EVENT,
                     },
-                    image: {ariaLabel: null, alt: null, tabindex: null, href: null, zoom: NO_EVENT, activate: NO_EVENT},
+                    image: {ariaLabel: null, alt: '', tabindex: null, href: null, zoom: NO_EVENT, activate: NO_EVENT},
                     caption: {
                         ariaLabel: null,
                         text: 'My title',
@@ -423,7 +487,7 @@ describe('Item', () => {
                         zoom: ALL_EVENTS,
                         activate: NO_EVENT,
                     },
-                    image: {ariaLabel: null, alt: null, tabindex: null, href: null, zoom: CLICK, activate: NO_EVENT},
+                    image: {ariaLabel: null, alt: '', tabindex: null, href: null, zoom: CLICK, activate: NO_EVENT},
                     caption: {
                         ariaLabel: null,
                         text: 'My title',
@@ -498,7 +562,7 @@ describe('Item', () => {
                         zoom: ALL_EVENTS,
                         activate: NO_EVENT,
                     },
-                    image: {ariaLabel: null, alt: null, tabindex: null, href: null, zoom: CLICK, activate: NO_EVENT},
+                    image: {ariaLabel: null, alt: '', tabindex: null, href: null, zoom: CLICK, activate: NO_EVENT},
                     caption: {
                         ariaLabel: null,
                         text: 'My title',
@@ -569,7 +633,7 @@ describe('Item', () => {
                     },
                     image: {
                         ariaLabel: 'zoom',
-                        alt: null,
+                        alt: '',
                         tabindex: '0',
                         href: null,
                         zoom: ALL_EVENTS,
@@ -665,7 +729,7 @@ describe('Item', () => {
                     },
                     image: {
                         ariaLabel: 'zoom',
-                        alt: null,
+                        alt: '',
                         tabindex: '0',
                         href: null,
                         zoom: ALL_EVENTS,
@@ -754,7 +818,7 @@ describe('Item', () => {
                         zoom: NO_EVENT,
                         activate: NO_EVENT,
                     },
-                    image: {ariaLabel: null, alt: null, tabindex: null, href: null, zoom: NO_EVENT, activate: NO_EVENT},
+                    image: {ariaLabel: null, alt: '', tabindex: null, href: null, zoom: NO_EVENT, activate: NO_EVENT},
                     caption: {
                         ariaLabel: null,
                         text: 'My title',
@@ -830,7 +894,7 @@ describe('Item', () => {
                         zoom: NO_EVENT,
                         activate: NO_EVENT,
                     },
-                    image: {ariaLabel: null, alt: null, tabindex: null, href: null, zoom: NO_EVENT, activate: NO_EVENT},
+                    image: {ariaLabel: null, alt: '', tabindex: null, href: null, zoom: NO_EVENT, activate: NO_EVENT},
                     caption: {
                         ariaLabel: null,
                         text: 'My title',
@@ -896,7 +960,7 @@ describe('Item', () => {
                     },
                     image: {
                         ariaLabel: 'zoom',
-                        alt: null,
+                        alt: '',
                         tabindex: '0',
                         href: null,
                         zoom: ALL_EVENTS,
@@ -978,7 +1042,7 @@ describe('Item', () => {
                     },
                     image: {
                         ariaLabel: 'zoom',
-                        alt: null,
+                        alt: '',
                         tabindex: '0',
                         href: null,
                         zoom: ALL_EVENTS,
@@ -1054,7 +1118,7 @@ describe('Item', () => {
                     },
                     image: {
                         ariaLabel: 'zoom',
-                        alt: null,
+                        alt: '',
                         tabindex: '0',
                         href: null,
                         zoom: ALL_EVENTS,
@@ -1150,7 +1214,7 @@ describe('Item', () => {
                     },
                     image: {
                         ariaLabel: 'zoom',
-                        alt: null,
+                        alt: '',
                         tabindex: '0',
                         href: null,
                         zoom: ALL_EVENTS,
