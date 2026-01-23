@@ -115,6 +115,11 @@ export interface ModelAttributes extends SizedModel {
      * Short text describing specifically the image
      */
     alt?: string;
+
+    /**
+     * Long description for screen readers (visually hidden)
+     */
+    accessibleDescription?: string;
 }
 
 export interface GalleryOptions extends ItemOptions {

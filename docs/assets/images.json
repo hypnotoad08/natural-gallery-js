@@ -284,6 +284,8 @@
             "height": 3648,
             "color": "#FEE5B1",
             "description": "Colorful starry night sky with the Milky Way and a shooting star over Rye",
+            "accessibleDescription": "Colorful starry night sky with the Milky Way stretching across the frame and a single shooting star over Rye.",
+            "alt": "Milky Way and a shooting star over Rye",
             "urls": {
                 "raw": "https://images.unsplash.com/photo-1468276311594-df7cb65d8df6?ixlib=rb-0.3.5&ixid=eyJhcHBfaWQiOjEyOTN9&s=adcfc627f67a4bcf1e5f78572f607389",
                 "full": "https://images.unsplash.com/photo-1468276311594-df7cb65d8df6?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjEyOTN9&s=05f10800fc35d9c8842775430dfb279d",
@@ -7924,6 +7926,7 @@
             "height": 4240,
             "color": "#8B72C9",
             "description": "A boat under a bright starry sky.",
+            "alt": "Alt attribute text example",
             "urls": {
                 "raw": "https://images.unsplash.com/photo-1504334469259-9413decad1c4?ixlib=rb-0.3.5&ixid=eyJhcHBfaWQiOjEyOTN9&s=01912a949ed8804fa6b194f25a016a3c",
                 "full": "https://images.unsplash.com/photo-1504334469259-9413decad1c4?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjEyOTN9&s=a95385cc0815cc4d8f69543899328458",
