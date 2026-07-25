@@ -1,5 +1,5 @@
 import {ModelAttributes} from './galleries/AbstractGallery';
-import {sanitizeHtml} from './Utility';
+import {renderSanitizedHtml, sanitizeToPlainText} from './Utility';
 
 export enum LabelVisibility {
     HOVER = 'hover',
@@ -34,13 +34,12 @@ export type ItemActivateEventDetail<Model extends ModelAttributes> = {
 
 export class Item<Model extends ModelAttributes> {
     /**
-     * Cleaned title, used for label / button
+     * Cleaned title, used for places that cannot hold markup: `alt`, `aria-label`, and
+     * PhotoSwipe's `alt`. Any `<br>` is flattened to a space.
+     *
+     * The visible label is rendered separately by `renderTitle()`, which keeps `<br>`.
      */
     public readonly sanitizedTitle: string;
-    /**
-     * Cleaned accessible description for screen readers
-     */
-    private readonly sanitizedAccessibleDescription: string;
     /**
      * Reference to the select button
      */
@@ -60,8 +59,7 @@ export class Item<Model extends ModelAttributes> {
         private readonly options: ItemOptions,
         public readonly model: Model,
     ) {
-        this.sanitizedTitle = sanitizeHtml(model.title);
-        this.sanitizedAccessibleDescription = sanitizeHtml(model.accessibleDescription);
+        this.sanitizedTitle = sanitizeToPlainText(model.title);
     }
 
     /**
@@ -175,13 +173,13 @@ export class Item<Model extends ModelAttributes> {
         if (this.options.lightbox && caption && link) {
             root = figure;
             zoomableElement = image;
-            link.innerHTML = this.sanitizedTitle;
+            this.renderTitle(link);
             figure.appendChild(image);
             caption.appendChild(link);
             caption.classList.add('link');
         } else if (this.options.lightbox && caption && !link) {
             root = figure;
-            caption.innerHTML = this.sanitizedTitle;
+            this.renderTitle(caption);
             figure.appendChild(image);
             zoomableElement = figure;
         } else if (this.options.lightbox && !caption && link) {
@@ -200,11 +198,11 @@ export class Item<Model extends ModelAttributes> {
             figure.appendChild(image);
             caption.appendChild(link);
             caption.classList.add('link');
-            link.innerHTML = this.sanitizedTitle;
+            this.renderTitle(link);
         } else if (!this.options.lightbox && caption && !link) {
             root = figure;
             figure.appendChild(image);
-            caption.innerHTML = this.sanitizedTitle;
+            this.renderTitle(caption);
         } else if (!this.options.lightbox && !caption && link) {
             root = link;
             figure.appendChild(image);
@@ -370,8 +368,18 @@ export class Item<Model extends ModelAttributes> {
         return image;
     }
 
+    /**
+     * Displays the title inside the given element, keeping `<br>` and dropping other tags.
+     *
+     * Same result as the `innerHTML` assignment this replaces, but the nodes are built directly
+     * instead of being re-parsed from a sanitized string.
+     */
+    private renderTitle(target: HTMLElement): void {
+        renderSanitizedHtml(target, this.model.title);
+    }
+
     private attachAccessibleDescription(figure: HTMLElement, image: HTMLImageElement): void {
-        if (!this.sanitizedAccessibleDescription) {
+        if (!this.model.accessibleDescription) {
             return;
         }
 
@@ -379,7 +387,10 @@ export class Item<Model extends ModelAttributes> {
         description.classList.add('ngjs-sr-only');
         const descriptionId = `ngjs-accessible-description-${++Item.accessibleDescriptionId}`;
         description.id = descriptionId;
-        description.innerHTML = this.sanitizedAccessibleDescription;
+        // `textContent` instead of `innerHTML`: the description is never rendered visually, so the
+        // markup `sanitizeHtml()` preserves buys nothing here, while assigning it as HTML would
+        // both trust that sanitizer and mangle legitimate text such as "shot at <f/1.8>".
+        description.textContent = this.model.accessibleDescription;
         figure.appendChild(description);
         image.setAttribute('aria-describedby', descriptionId);
     }
@@ -460,7 +471,10 @@ export class Item<Model extends ModelAttributes> {
         }
 
         element.tabIndex = 0;
-        element.setAttribute('aria-label', 'zoom');
+        // Name the control after the item, so a screen reader user browsing the grid can tell the
+        // zoom buttons apart. A bare "zoom" would override the figcaption and make every item of
+        // the gallery announce itself identically.
+        element.setAttribute('aria-label', this.sanitizedTitle ? `Zoom: ${this.sanitizedTitle}` : 'Zoom image');
         element.setAttribute('role', 'button');
         element.classList.add('zoomable');
         const handleZoom = () => {
