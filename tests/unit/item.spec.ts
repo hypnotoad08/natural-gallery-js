@@ -246,13 +246,16 @@ describe('Item', () => {
         expect(item.image.getAttribute('aria-describedby')).toBe(description?.id);
     });
 
-    it('should set empty alt when accessible description is provided without caption', () => {
+    it('should not let the accessible description suppress the alt', () => {
         const item = createItem(mockDocument, {
             title: 'My title',
             accessibleDescription: 'Long description for screen readers.',
         });
 
-        expect(item.image.getAttribute('alt')).toBe('');
+        // Without a caption the title is the accessible name, and the description only complements
+        // it. The alt is decided by the caption alone, the description never takes part in it.
+        expect(item.image.getAttribute('alt')).toBe('My title');
+        expect(item.image.getAttribute('aria-describedby')).not.toBeNull();
     });
 
     it('should set empty alt when accessible description is provided with caption', () => {
@@ -274,6 +277,126 @@ describe('Item', () => {
         });
 
         expect(item.image.getAttribute('alt')).toBe('My alt');
+    });
+
+    it('should name the zoom control after the item', () => {
+        const first = createItem(mockDocument, {title: 'First photo'}, {lightbox: true});
+        const second = createItem(mockDocument, {title: 'Second photo'}, {lightbox: true});
+
+        // Every zoomable item used to be labelled "zoom", leaving a screen reader user with no way
+        // to tell one item of the gallery from the next.
+        expect(first.root.getAttribute('aria-label')).toBe('Zoom: First photo');
+        expect(second.root.getAttribute('aria-label')).toBe('Zoom: Second photo');
+        expect(first.root.getAttribute('aria-label')).not.toBe(second.root.getAttribute('aria-label'));
+    });
+
+    it('should fall back to a generic zoom label when there is no title', () => {
+        const item = createItem(mockDocument, {}, {lightbox: true});
+        expect(item.root.getAttribute('aria-label')).toBe('Zoom image');
+    });
+
+    it('should name the zoom control when the image carries the zoom, not the figure', () => {
+        // With a caption and a link the image is the zoomable element, and it has no figcaption
+        // inside it to fall back on, so it needs the label of its own.
+        const item = createItem(
+            mockDocument,
+            {title: 'My title', link: 'https://example.com'},
+            {labelVisibility: LabelVisibility.ALWAYS, lightbox: true},
+        );
+
+        expect(item.image.getAttribute('aria-label')).toBe('Zoom: My title');
+    });
+
+    it('should expose the accessible description as text, not markup', () => {
+        const item = createItem(mockDocument, {
+            title: 'My title',
+            accessibleDescription: 'shot at 50mm <f/1.8> handheld',
+        });
+
+        const description = item.root.querySelector('.ngjs-sr-only') as HTMLElement;
+        // Text is preserved verbatim, and nothing inside it becomes an element.
+        expect(description.textContent).toBe('shot at 50mm <f/1.8> handheld');
+        expect(description.children.length).toBe(0);
+    });
+
+    it('should not build elements from an accessible description', () => {
+        const item = createItem(mockDocument, {
+            title: 'My title',
+            accessibleDescription: '<img src=x onerror="alert(1)" alt="a sunset',
+        });
+
+        const description = item.root.querySelector('.ngjs-sr-only') as HTMLElement;
+        // The old regex sanitizer let an unclosed tag through, and `innerHTML` then built it.
+        expect(description.querySelector('img')).toBeNull();
+        expect(description.children.length).toBe(0);
+        expect(description.textContent).toBe('<img src=x onerror="alert(1)" alt="a sunset');
+    });
+
+    it('should render a title containing <br> as a line break', () => {
+        const item = createItem(
+            mockDocument,
+            {title: 'First line<br>second line'},
+            {labelVisibility: LabelVisibility.ALWAYS},
+        );
+
+        expect(item.caption!.querySelectorAll('br').length).toBe(1);
+        expect(item.caption!.textContent).toBe('First linesecond line');
+    });
+
+    it('should not build markup from a title', () => {
+        const item = createItem(
+            mockDocument,
+            {title: 'boom <img src=x onerror="window.__xss = 1" alt="x'},
+            {labelVisibility: LabelVisibility.ALWAYS},
+        );
+
+        // The unclosed tag used to survive the regex sanitizer and reach innerHTML.
+        expect(item.caption!.querySelector('img')).toBeNull();
+        expect(item.caption!.querySelectorAll('*').length).toBe(0);
+        expect(item.caption!.textContent).toBe('boom ');
+    });
+
+    it('should render no caption when the title is nothing but markup', () => {
+        const item = createItem(
+            mockDocument,
+            {title: '<img src=x onerror="window.__xss = 1" alt="boom'},
+            {labelVisibility: LabelVisibility.ALWAYS},
+        );
+
+        // Nothing survives sanitizing, so there is no label to show.
+        expect(item.item.sanitizedTitle).toBe('');
+        expect(item.caption).toBeNull();
+    });
+
+    it('should strip tags from a title, as before', () => {
+        const item = createItem(
+            mockDocument,
+            {title: 'foo <strong>bar</strong> baz'},
+            {labelVisibility: LabelVisibility.ALWAYS},
+        );
+
+        expect(item.caption!.querySelector('strong')).toBeNull();
+        expect(item.caption!.textContent).toBe('foo bar baz');
+    });
+
+    it('should render the title into the link when there is one', () => {
+        const item = createItem(
+            mockDocument,
+            {title: 'Left<br>Right', link: 'https://example.com'},
+            {labelVisibility: LabelVisibility.ALWAYS},
+        );
+
+        expect(item.link!.querySelectorAll('br').length).toBe(1);
+        expect(item.link!.textContent).toBe('LeftRight');
+    });
+
+    it('should flatten <br> out of plain-text contexts', () => {
+        const item = createItem(mockDocument, {title: 'First line<br>second line'}, {lightbox: true});
+
+        // alt and aria-label cannot hold markup, and a literal "<br>" would be announced as text.
+        expect(item.item.sanitizedTitle).toBe('First line second line');
+        expect(item.image.getAttribute('alt')).toBe('First line second line');
+        expect(item.root.getAttribute('aria-label')).toBe('Zoom: First line second line');
     });
 
     it('should initialize item unchecked', () => {
@@ -447,7 +570,7 @@ describe('Item', () => {
                     select: events,
                     root: {
                         tag: 'FIGURE',
-                        ariaLabel: 'zoom',
+                        ariaLabel: 'Zoom: My title',
                         tabindex: '0',
                         href: null,
                         zoom: ALL_EVENTS,
@@ -481,7 +604,7 @@ describe('Item', () => {
                     select: events,
                     root: {
                         tag: 'FIGURE',
-                        ariaLabel: 'zoom',
+                        ariaLabel: 'Zoom: My title',
                         tabindex: '0',
                         href: null,
                         zoom: ALL_EVENTS,
@@ -515,7 +638,7 @@ describe('Item', () => {
                     select: events,
                     root: {
                         tag: 'FIGURE',
-                        ariaLabel: 'zoom',
+                        ariaLabel: 'Zoom: My title',
                         tabindex: '0',
                         href: null,
                         zoom: ALL_EVENTS,
@@ -556,7 +679,7 @@ describe('Item', () => {
                     select: events,
                     root: {
                         tag: 'FIGURE',
-                        ariaLabel: 'zoom',
+                        ariaLabel: 'Zoom: My title',
                         tabindex: '0',
                         href: null,
                         zoom: ALL_EVENTS,
@@ -591,7 +714,7 @@ describe('Item', () => {
                     select: events,
                     root: {
                         tag: 'FIGURE',
-                        ariaLabel: 'zoom',
+                        ariaLabel: 'Zoom image',
                         tabindex: '0',
                         href: null,
                         zoom: ALL_EVENTS,
@@ -632,7 +755,7 @@ describe('Item', () => {
                         activate: NO_EVENT,
                     },
                     image: {
-                        ariaLabel: 'zoom',
+                        ariaLabel: 'Zoom: My title',
                         alt: '',
                         tabindex: '0',
                         href: null,
@@ -680,7 +803,7 @@ describe('Item', () => {
                         activate: NO_EVENT,
                     },
                     image: {
-                        ariaLabel: 'zoom',
+                        ariaLabel: 'Zoom: My title',
                         alt: 'My alt',
                         tabindex: '0',
                         href: null,
@@ -728,7 +851,7 @@ describe('Item', () => {
                         activate: NO_EVENT,
                     },
                     image: {
-                        ariaLabel: 'zoom',
+                        ariaLabel: 'Zoom: My title',
                         alt: '',
                         tabindex: '0',
                         href: null,
@@ -918,7 +1041,7 @@ describe('Item', () => {
                     select: events,
                     root: {
                         tag: 'FIGURE',
-                        ariaLabel: 'zoom',
+                        ariaLabel: 'Zoom: My title',
                         tabindex: '0',
                         href: null,
                         zoom: ALL_EVENTS,
@@ -959,7 +1082,7 @@ describe('Item', () => {
                         activate: NO_EVENT,
                     },
                     image: {
-                        ariaLabel: 'zoom',
+                        ariaLabel: 'Zoom: My title',
                         alt: '',
                         tabindex: '0',
                         href: null,
@@ -1000,7 +1123,7 @@ describe('Item', () => {
                         activate: NO_EVENT,
                     },
                     image: {
-                        ariaLabel: 'zoom',
+                        ariaLabel: 'Zoom: My title',
                         alt: 'My alt',
                         tabindex: '0',
                         href: null,
@@ -1041,7 +1164,7 @@ describe('Item', () => {
                         activate: NO_EVENT,
                     },
                     image: {
-                        ariaLabel: 'zoom',
+                        ariaLabel: 'Zoom: My title',
                         alt: '',
                         tabindex: '0',
                         href: null,
@@ -1076,7 +1199,7 @@ describe('Item', () => {
                     select: events,
                     root: {
                         tag: 'FIGURE',
-                        ariaLabel: 'zoom',
+                        ariaLabel: 'Zoom image',
                         tabindex: '0',
                         href: null,
                         zoom: ALL_EVENTS,
@@ -1117,7 +1240,7 @@ describe('Item', () => {
                         activate: NO_EVENT,
                     },
                     image: {
-                        ariaLabel: 'zoom',
+                        ariaLabel: 'Zoom: My title',
                         alt: '',
                         tabindex: '0',
                         href: null,
@@ -1165,7 +1288,7 @@ describe('Item', () => {
                         activate: NO_EVENT,
                     },
                     image: {
-                        ariaLabel: 'zoom',
+                        ariaLabel: 'Zoom: My title',
                         alt: 'My alt',
                         tabindex: '0',
                         href: null,
@@ -1213,7 +1336,7 @@ describe('Item', () => {
                         activate: NO_EVENT,
                     },
                     image: {
-                        ariaLabel: 'zoom',
+                        ariaLabel: 'Zoom: My title',
                         alt: '',
                         tabindex: '0',
                         href: null,
