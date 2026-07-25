@@ -168,7 +168,7 @@ export class Item<Model extends ModelAttributes> {
         this.attachAccessibleDescription(figure, image);
 
         // Prepare contextual containers
-        let root = null;
+        let root: HTMLElement;
         const link = this.getEmptyLinkOrButton();
         let zoomableElement: HTMLElement | null = null;
 
@@ -210,12 +210,12 @@ export class Item<Model extends ModelAttributes> {
             root = link;
             figure.appendChild(image);
             link.appendChild(figure);
-        } else if (!this.options.lightbox && !caption && !link) {
+        } else {
             root = figure;
             figure.appendChild(image);
         }
 
-        this._rootElement = root || figure;
+        this._rootElement = root;
         this._rootElement.setAttribute('role', 'group');
         this._rootElement.classList.add('root');
 
@@ -361,10 +361,9 @@ export class Item<Model extends ModelAttributes> {
         // If title, but no alt neither caption, set title as alt attribute on image
         if (this.model.alt && this.model.alt !== this.sanitizedTitle) {
             image.setAttribute('alt', this.model.alt);
-        } else if ((!hasCaption && !this.sanitizedAccessibleDescription) && this.sanitizedTitle) {
+        } else if (!hasCaption && !this.sanitizedAccessibleDescription && this.sanitizedTitle) {
             image.setAttribute('alt', this.sanitizedTitle);
-        }
-        else {
+        } else {
             image.setAttribute('alt', '');
         }
 
@@ -460,23 +459,21 @@ export class Item<Model extends ModelAttributes> {
             return;
         }
 
-        if (element) {
-            element.tabIndex = 0;
-            element.setAttribute('aria-label', 'zoom');
-            element.setAttribute('role', 'button');
-            element.classList.add('zoomable');
-            const handleZoom = () => {
-                const event = new CustomEvent<Item<Model>>('zoom', {detail: this});
-                this._rootElement?.dispatchEvent(event);
-            };
+        element.tabIndex = 0;
+        element.setAttribute('aria-label', 'zoom');
+        element.setAttribute('role', 'button');
+        element.classList.add('zoomable');
+        const handleZoom = () => {
+            const event = new CustomEvent<Item<Model>>('zoom', {detail: this});
+            this._rootElement?.dispatchEvent(event);
+        };
 
-            element.addEventListener('click', handleZoom);
-            element.addEventListener('keydown', e => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleZoom();
-                }
-            });
-        }
+        element.addEventListener('click', handleZoom);
+        element.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleZoom();
+            }
+        });
     }
 }
