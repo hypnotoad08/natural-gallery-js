@@ -1,20 +1,24 @@
 name: main
 on: [push, pull_request]
+permissions:
+    contents: read
 
 jobs:
     build:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6
               with:
+                  persist-credentials: false
                   fetch-depth: 0 # Need all tags to get a version number in-between tags
-            - uses: actions/setup-node@v4
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v6
               with:
                   node-version: '24'
-                  cache: 'yarn'
-            - run: yarn --frozen-lockfile
-            - run: yarn build
-            - uses: actions/upload-artifact@v4
+                  cache: 'pnpm'
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm build
+            - uses: actions/upload-artifact@v7
               with:
                   name: dist
                   path: dist/
@@ -22,17 +26,19 @@ jobs:
     test:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6
               with:
+                  persist-credentials: false
                   fetch-depth: 0 # Need all tags to get a version number in-between tags
-            - uses: actions/setup-node@v4
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v6
               with:
                   node-version: '24'
-                  cache: 'yarn'
-            - run: yarn --frozen-lockfile
+                  cache: 'pnpm'
+            - run: pnpm install --frozen-lockfile
 
             - name: Install Playwright
-              run: yarn playwright install chromium --with-deps
+              run: pnpm playwright install chromium --with-deps
 
             - name: Setup Ruby
               uses: ruby/setup-ruby@v1
@@ -41,37 +47,37 @@ jobs:
                   bundler-cache: true
                   working-directory: docs
 
-            - name: Start Jekyll and run tests
-              run: |
-                  yarn build 
-                  (cd docs && bundle exec jekyll serve --detach --port 4000) &
-                  sleep 10
-                  yarn test
+            - run: pnpm build
+            - run: pnpm test
 
     lint:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6
               with:
+                  persist-credentials: false
                   fetch-depth: 0 # Need all tags to get a version number in-between tags
-            - uses: actions/setup-node@v4
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v6
               with:
                   node-version: '24'
-                  cache: 'yarn'
-            - run: yarn --frozen-lockfile
-            - run: yarn lint
+                  cache: 'pnpm'
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm lint
 
     prettier:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6
               with:
+                  persist-credentials: false
                   fetch-depth: 0 # Need all tags to get a version number in-between tags
-            - uses: actions/setup-node@v4
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v6
               with:
                   node-version: '24'
-                  cache: 'yarn'
-            - run: yarn --frozen-lockfile
+                  cache: 'pnpm'
+            - run: pnpm install --frozen-lockfile
             - run: ./node_modules/.bin/prettier --check .
 
     deploy:
@@ -86,15 +92,17 @@ jobs:
         if: github.ref == 'refs/heads/master' && github.event_name == 'push'
         needs: [build, test, lint, prettier]
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6
               with:
+                  persist-credentials: false
                   fetch-depth: 0 # Need all tags to get a version number in-between tags
-            - uses: actions/setup-node@v4
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v6
               with:
                   node-version: '24'
-                  cache: 'yarn'
-            - run: yarn --frozen-lockfile
-            - run: yarn build
+                  cache: 'pnpm'
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm build
             - name: Setup Ruby
               uses: ruby/setup-ruby@v1
               with:
@@ -118,25 +126,26 @@ jobs:
         permissions:
             contents: write
             id-token: write
-            packages: write
         if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
         needs: [build, test, lint, prettier]
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6
               with:
+                  persist-credentials: false
                   ref: ${{ github.ref }} # Otherwise our annotated tag is not fetched and we cannot get correct version
-            - uses: actions/download-artifact@v4
+            - uses: actions/download-artifact@v8
               with:
                   name: dist
                   path: dist/
             - run: rm .gitignore
 
             # Publish to npm
-            - uses: actions/setup-node@v4
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v6
               with:
                   node-version: '24'
                   registry-url: 'https://registry.npmjs.org'
-            - run: npm publish dist/
+            - run: pnpm publish dist/
 
             # Create release
             - name: Get release info
