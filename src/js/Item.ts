@@ -165,7 +165,6 @@ export class Item<Model extends ModelAttributes> {
         const figure = this.getFigure();
         const caption = this.getEmptyCaption();
         const image = this.getImage(!!caption);
-        this.attachAccessibleDescription(figure, image);
 
         // Prepare contextual containers
         let root: HTMLElement;
@@ -221,6 +220,7 @@ export class Item<Model extends ModelAttributes> {
 
         const checkbox = this.getCheckbox();
         [caption, checkbox].filter(c => !!c).forEach(c => figure.appendChild(c));
+        this.attachAccessibleDescription(figure, image);
         this.handleZoom(zoomableElement);
         this.style();
 
@@ -361,7 +361,7 @@ export class Item<Model extends ModelAttributes> {
         // If title, but no alt neither caption, set title as alt attribute on image
         if (this.model.alt && this.model.alt !== this.sanitizedTitle) {
             image.setAttribute('alt', this.model.alt);
-        } else if (!hasCaption && !this.sanitizedAccessibleDescription && this.sanitizedTitle) {
+        } else if (!hasCaption && this.sanitizedTitle) {
             image.setAttribute('alt', this.sanitizedTitle);
         } else {
             image.setAttribute('alt', '');

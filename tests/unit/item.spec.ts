@@ -246,13 +246,30 @@ describe('Item', () => {
         expect(item.image.getAttribute('aria-describedby')).toBe(description?.id);
     });
 
-    it('should set empty alt when accessible description is provided without caption', () => {
+    it('should append accessible description after the image and the caption', () => {
+        const item = createItem(
+            mockDocument,
+            {title: 'My title', accessibleDescription: 'Long description for screen readers.'},
+            {labelVisibility: LabelVisibility.ALWAYS},
+        );
+
+        // The description is read after what it describes, so it must come last in the DOM.
+        const children = Array.from(item.image.parentElement!.children);
+        const description = item.root.querySelector('.ngjs-sr-only') as HTMLElement;
+        expect(children.indexOf(description)).toBeGreaterThan(children.indexOf(item.image));
+        expect(children.indexOf(description)).toBe(children.length - 1);
+    });
+
+    it('should not let the accessible description suppress the alt', () => {
         const item = createItem(mockDocument, {
             title: 'My title',
             accessibleDescription: 'Long description for screen readers.',
         });
 
-        expect(item.image.getAttribute('alt')).toBe('');
+        // Without a caption the title is the accessible name, and the description only complements
+        // it. The alt is decided by the caption alone, the description never takes part in it.
+        expect(item.image.getAttribute('alt')).toBe('My title');
+        expect(item.image.getAttribute('aria-describedby')).not.toBeNull();
     });
 
     it('should set empty alt when accessible description is provided with caption', () => {
