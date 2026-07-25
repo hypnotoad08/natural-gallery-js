@@ -34,8 +34,19 @@ platforms :mingw, :x64_mingw, :mswin, :jruby do
   gem "tzinfo-data"
 end
 
-# Performance-booster for watching directories on Windows
-gem "wdm", "~> 0.1.1", :platforms => [:mingw, :x64_mingw, :mswin]
+# Performance-booster for watching directories on Windows. Entirely optional: Jekyll falls back
+# to polling without it.
+#
+# Requires >= 0.2.0. Version 0.1.1 cannot compile on Ruby 3.x — it calls
+# `rb_thread_call_without_gvl` without including the header that declares it, so the native
+# extension fails to build and `bundle install` aborts.
+#
+# `install_if Gem.win_platform?` rather than `:platforms => [...]`, because the platform list has
+# to enumerate every Windows platform string and Ruby 3.1+ introduced a new one
+# (`x64-mingw-ucrt`) that the old list did not cover, making the bundle unresolvable there.
+install_if -> { Gem.win_platform? } do
+  gem "wdm", ">= 0.2.0"
+end
 
 # Lock `http_parser.rb` gem to `v0.6.x` on JRuby builds since newer versions of the gem
 # do not have a Java counterpart.
